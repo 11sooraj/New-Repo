@@ -145,38 +145,28 @@ def get_products_by_date(
     return products
 
 
-@app.get("/sales-summary/", response_model=List[SalesSummary])
-def get_sales_summary(
-    byDate: Optional[datetime] = None,
+@app.get("/products-by-alphabet/", response_model=List[SalesProduct])
+def get_products_by_alphabet(
+    alphabet: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    # Build the base query to aggregate total sales count and value per day
-    query = (
-        db.query(
-            func.date(SalesProducts.created_at).label("created_date"),
-            func.count(SalesProducts.id).label("total_sales"),  
-            func.sum(SalesProducts.total_sales_value).label("Total_Sales")  
-        )
-        .group_by(func.date(SalesProducts.created_at))
-        .order_by(func.date(SalesProducts.created_at))
-    )
+    # Validate the alphabet input
+    if alphabet:
+        if not alphabet.isalpha() or len(alphabet) != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid alphabet. Please provide a single alphabet character."
+            )
+        # Convert to uppercase to ensure case-insensitive search
+        alphabet = alphabet.upper()
 
-    # Apply filter if a specific date is provided
-    if byDate:
-        query = query.filter(func.date(SalesProducts.created_at) == byDate.date())
+    # Build the query
+    query = db.query(SalesProducts)
+
+    # Apply filtering if alphabet is provided
+    if alphabet:
+        query = query.filter(func.upper(SalesProducts.product_name).like(f"{alphabet}%"))
     
-    # Execute the query and get results
-    results = query.all()
-
-    # Handle the case where no data is found
-    if not results:
-        raise HTTPException(status_code=404, detail="No sales data found for the specified date")
-
-    # Convert query results to list of SalesSummary models
-    return [
-        SalesSummary(
-            created_date=row.created_date,
-            total_sales=row.total_sales,
-            Total_Sales=row.Total_Sales
-        ) for row in results
-    ]
+    products = query.all()
+    
+    return products
