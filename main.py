@@ -35,7 +35,7 @@ def get_db():
 #             total_sales_value=random.uniform(100, 1000),
 #             orders_count=random.randint(1, 100)
 #         )
-#         db.add(fake_product)
+#         db.add(fake_product)  
 #     db.commit()
 #     db.close()
 
